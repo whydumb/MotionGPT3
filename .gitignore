@@ -1,0 +1,14 @@
+**/__pycache__/**
+*.pyc
+
+code_for_demo/
+demos/
+experiments/
+results/
+mld/
+mot_gpt2/
+save_model_weights.py
+mGPTv3/
+README0.md
+app.py
+assets/*
