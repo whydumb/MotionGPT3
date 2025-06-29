@@ -33,7 +33,7 @@ Though recent advances in multimodal models have demonstrated strong capabilitie
 
 ## 🚩 News
 
-- [2025/06/20] Upload and init project
+- [2025/06/30] Upload and init project
 
 ## ⚡ Quick Start
 
