@@ -11,4 +11,4 @@ save_model_weights.py
 mGPTv3/
 README0.md
 app.py
-assets/*
+# assets/*

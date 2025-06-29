@@ -4,10 +4,10 @@
 </div>
 
 <div align="center">
-    <h2> <a href="https://github.com/MotionGPT3/MotionGPT3.github.io">MotionGPT3: Human Motion as a Second Modality</a></h2>
+    <h2> <a href="https://motiongpt3.github.io">MotionGPT3: Human Motion as a Second Modality</a></h2>
 
 <p align="center">
-  <a href="https://github.com/MotionGPT3/MotionGPT3.github.io">Project Page</a> •
+  <a href="https://motiongpt3.github.io">Project Page</a> •
   <a href="https://arxiv.org/abs/xxxx ">Arxiv Paper</a> •
   <a href="#-citation">Citation
 </p>
@@ -21,7 +21,7 @@
 
 ## 🏃 Intro MotionGPT3
 
-MotionGPT3 is a **bimodal** motion-language framework designed to address the challenges of **unified** motion understanding and generation.
+MotionGPT3 is a **bimodal** motion-language framework using MoT architecture designed to address the challenges of **unified** motion understanding and generation.
 
 <details>
     <summary><b>Technical details</b></summary>
@@ -37,7 +37,7 @@ Though recent advances in multimodal models have demonstrated strong capabilitie
 
 ## ⚡ Quick Start
 
-<details>
+<details open>
   <summary><b>Setup and download</b></summary>
 
 ### 1. Conda environment
@@ -89,7 +89,7 @@ Visit [XXX](https://XXXXXX) to download the pretrained models. -->
 
 ## ▶️ Demo
 
-<details>
+<details open>
   <summary><b>Webui</b></summary>
 
 Run the following script to launch webui, then visit [0.0.0.0:8888](http://0.0.0.0:8888)
@@ -100,7 +100,7 @@ python app.py
 
 </details>
 
-<details>
+<details open>
   <summary><b>Batch demo</b></summary>
 
 We support txt file input, the output motions are npy files and output texts are txt files. Please check the `configs/assets.yaml` for path config, TEST.FOLDER as output folder.
@@ -124,7 +124,7 @@ The outputs:
 
 ## 💻 Train your own models
 
-<details>
+<details open>
   <summary><b>Training guidance</b></summary>
 
 ### 1. Prepare the datasets
@@ -185,7 +185,7 @@ Some parameters:
 
 ## 👀 Visualization
 
-<details>
+<details open>
   <summary><b>Render SMPL</b></summary>
 
 ### 1. Set up blender - WIP
@@ -229,10 +229,6 @@ optional parameters:
 - `--mode=sequence`: render the whole motion in a png image.
 </details>
 
-## ⚠️ FAQ
-
-<details> <summary><b>Question-and-Answer</b></summary>
-    
 
 ## 📖 Citation
 
