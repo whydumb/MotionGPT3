@@ -14,8 +14,6 @@ from motGPT.models.build_model import build_model
 from motGPT.utils.logger import create_logger
 from motGPT.utils.load_checkpoint import load_pretrained, load_pretrained_vae
 
-os.environ['HF_ENDPOINT'] = 'https://hf-mirror.com'
-
 def print_table(title, metrics, logger=None):
     table = Table(title=title)
 

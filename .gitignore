@@ -10,6 +10,6 @@ mot_gpt2/
 save_model_weights.py
 mGPTv3/
 README0.md
-app.py
+# app.py
 # assets/*
 test_folder.py
