@@ -26,10 +26,10 @@ MotionGPT3 is a **bimodal** motion-language framework using MoT architecture des
 <details open>
     <summary><b>Technical details</b></summary>
 
-<p>
+<p style="margin-bottom: 4px;">
 Inspired by the mixture of experts, we propose MotionGPT3, a bimodal motion-language model that treats human motion as a second modality, decoupling motion modeling via separate model parameters and enabling both effective cross-modal interaction and efficient multimodal scaling training. 
 </p>
-<p>
+<p style="margin-bottom: 4px;">
 To preserve language intelligence, the text branch remains the same with the pretrained language model, while a motion branch is integrated via shared attention, enabling bidirectional information flow between two modalities. We employ a motion VAE to encode raw human motion into latent representations, while motion branch predicts motion latents directly from intermediate hidden states using a diffusion head, bypassing discrete tokenization. 
 </p>
 <p>
