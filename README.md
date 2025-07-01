@@ -8,7 +8,7 @@
 
 <p align="center">
   <a href="https://motiongpt3.github.io">Project Page</a> •
-  <a href="https://arxiv.org/abs/xxxx ">Arxiv Paper</a> •
+  <a href="https://arxiv.org/abs/2506.24086 ">Arxiv Paper</a> •
   <a href="#-citation">Citation
 </p>
 
