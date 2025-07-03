@@ -72,7 +72,7 @@ class Text2MotionDatasetToken(data.Dataset):
         
     def __getitem__(self, item):
         fname = self.name_list[item]
-        data = self.data_dict[name]
+        data = self.data_dict[fname]
         motion, m_length = data['motion'], data['length']
 
         m_length = (m_length // self.unit_length) * self.unit_length

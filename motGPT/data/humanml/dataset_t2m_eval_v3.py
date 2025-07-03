@@ -33,11 +33,7 @@ class Text2MotionDatasetEvalV3(Text2MotionDataset):
         idx = self.pointer + item
         fname = self.name_list[idx]
         data = self.data_dict[fname]
-        motion, m_length, text_list = data["motion"], data["length"], data["text"]
-
-        m_token_list = data['m_token_list']
-        m_tokens = random.choice(m_token_list)
-        # m_tokens = m_token_list[0]
+        motion, text_list = data["motion"], data["text"]
 
         # all_captions = [
         #     ' '.join([token.split('/')[0] for token in text_dic['tokens']])
@@ -57,7 +53,6 @@ class Text2MotionDatasetEvalV3(Text2MotionDataset):
 
         # Randomly select a caption
         text_data = random.choice(text_list)
-        # text_data = text_list[0]
         caption, tokens = text_data["caption"], text_data["tokens"]
         # Text
         max_text_len = 20
@@ -81,32 +76,22 @@ class Text2MotionDatasetEvalV3(Text2MotionDataset):
         word_embeddings = np.concatenate(word_embeddings, axis=0)
         
         # Random crop
-        if self.unit_length < 10:
-            coin2 = np.random.choice(["single", "single", "double"])
-        else:
-            coin2 = "single"
-
-        if coin2 == "double":
+        coin = np.random.choice([False, False, True])
+        m_length = motion.shape[0]
+        if coin:
+            # drop one token at the head or tail
             coin2 = np.random.choice([True, False])
             if coin2:
-                m_tokens = m_tokens[:-1]
+                m_length = (m_length // self.unit_length - 1) * self.unit_length
             else:
-                m_tokens = m_tokens[1:]
-        #     m_length = (m_length // self.unit_length - 1) * self.unit_length
-        # elif coin2 == "single":
-        #     m_length = (m_length // self.unit_length) * self.unit_length
-        m_tokens_len = m_tokens.shape[0]
-        
-        if m_tokens_len* self.unit_length < motion.shape[0]:
-            m_length = m_tokens_len* self.unit_length
+                m_length = (m_length // self.unit_length) * self.unit_length
+
         idx = random.randint(0, len(motion) - m_length)
-        # idx = 0
         motion = motion[idx:idx + m_length]
-        m_length = motion.shape[0]
         
         # Z Normalization
         motion = (motion - self.mean) / self.std
 
-        return caption, m_tokens, m_tokens_len, motion, m_length, word_embeddings, pos_one_hots, sent_len, "_".join(
+        return caption, None, None, motion, m_length, word_embeddings, pos_one_hots, sent_len, "_".join(
             tokens), all_captions, None, fname
         # text, m_tokens, m_tokens_len, motion, length, word_embs, pos_ohot, text_len, tokens, all_captions ,tasks, fname

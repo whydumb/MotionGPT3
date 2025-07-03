@@ -87,14 +87,9 @@ class Text2MotionDatasetCBV3(data.Dataset):
                 break
             # try:
             # Load motion tokens
-            motion_list = [np.load(pjoin(motion_dir, f'{name}.npy'))]
-            try:
-                m_token_list = np.load(pjoin(code_dir, f'{name}.npy'))
-            except:
-                continue
-            # if m_token_list.shape[1]*self.unit_length > motion_list[0].shape[0]:
-            #     print(name, m_token_list.shape, motion_list[0].shape) 
-            #     exit()
+            # motion_list = [np.load(pjoin(motion_dir, f'{name}.npy'))]
+            motion = np.load(pjoin(motion_dir, f'{name}.npy'))
+
             text_data = []
             flag = False
             # Read text
@@ -116,51 +111,28 @@ class Text2MotionDatasetCBV3(data.Dataset):
                         flag = True
                         text_data.append(text_dict)
                     else:
-                        m_token_list_new = [
-                            tokens[int(f_tag * fps / unit_length
-                                        ):int(to_tag * fps / unit_length)]
-                            for tokens in m_token_list
-                            if int(f_tag * fps / unit_length) <
-                            int(to_tag * fps / unit_length)
-                        ]
-                        motion_list_new = [
-                            m[int(f_tag * fps):int(to_tag * fps )]
-                            for m in motion_list
-                            if int(f_tag * fps ) < int(to_tag * fps)
-                        ]
-
-                        if (len(m_token_list_new) == 0) or (len(motion_list_new) == 0):
-                            # print(name, len(m_token_list_new), len(motion_list_new) )
-                            continue
-                        # if len(m_token_list_new[0])*self.unit_length > motion_list_new[0].shape[0]:
-                        #     print(name, f_tag, to_tag, m_token_list_new[0].shape, motion_list_new[0].shape) 
-                        #     exit()
+                        if int(f_tag * fps ) >= int(to_tag * fps): continue
+                        motion_new = motion[int(f_tag * fps):int(to_tag * fps )]                       
                         new_name = '%s_%f_%f' % (name, f_tag, to_tag)
 
-                        if (len(motion_list_new[0])) < self.min_motion_length or (
-                                len(motion_list_new[0]) >= self.max_motion_length):
+                        if (len(motion_new)) < self.min_motion_length or (
+                                len(motion_new) >= self.max_motion_length):
                             continue
                         data_dict[new_name] = {
-                            'm_token_list': m_token_list_new,
-                            'motion_list': motion_list_new,
+                            'motion': motion_new,
                             'text': [text_dict]
                         }
                         new_name_list.append(new_name)
                     # except:
                     #     pass
 
-            if flag and (not (len(motion_list[0])) < self.min_motion_length or (
-                len(motion_list[0]) >= self.max_motion_length)):
+            if flag and (not (len(motion)) < self.min_motion_length or (
+                len(motion) >= self.max_motion_length)):
                 data_dict[name] = {
-                    'm_token_list': m_token_list,
-                    'motion_list': motion_list,
+                    'motion': motion,
                     'text': text_data
                 }
                 new_name_list.append(name)
-            # except Exception as e:
-            #     pass
-            #     print(name, e) 
-            #     exit()
 
         if tmpFile:
             os.makedirs(pjoin(data_root, 'tmp'), exist_ok=True)
@@ -198,11 +170,10 @@ class Text2MotionDatasetCBV3(data.Dataset):
 
         fname = self.name_list[data_idx]
         data = self.data_dict[fname]
-        m_token_list, text_list = data['m_token_list'], data['text']
-        motion_list = data['motion_list']
+        text_list = data['text']
+        motion = data['motion']
 
-        m_tokens = random.choice(m_token_list)
-        motion = random.choice(motion_list)
+        # Randomly select a caption
         text_data = random.choice(text_list)
         caption = text_data['caption']
         if self.std_text:
@@ -227,33 +198,24 @@ class Text2MotionDatasetCBV3(data.Dataset):
             for text_dic in text_list
         ]
 
+        # Random crop
         coin = np.random.choice([False, False, True])
-
-        # m_length = m_tokens.shape[0]
+        m_length = motion.shape[0]
         if coin:
             # drop one token at the head or tail
             coin2 = np.random.choice([True, False])
             if coin2:
-                # length = (length // self.unit_length - 1) * self.unit_length
-                m_tokens = m_tokens[:-1]
+                m_length = (m_length // self.unit_length - 1) * self.unit_length
             else:
-                # length = (length // self.unit_length) * self.unit_length
-                m_tokens = m_tokens[1:]
-        m_tokens_len = m_tokens.shape[0]
-        # if motion.shape[0] < m_length:
-        #     print('mismatched data shape in ', fname, motion.shape, m_tokens.shape)
-        #     exit()
+                m_length = (m_length // self.unit_length) * self.unit_length
 
-        if m_tokens_len* self.unit_length < motion.shape[0]:
-            m_length = m_tokens_len* self.unit_length
-            idx = random.randint(0, len(motion) - m_length)
-            motion = motion[idx:idx + m_length]
-        motion_len = motion.shape[0]
+        idx = random.randint(0, len(motion) - m_length)
+        motion = motion[idx:idx + m_length]
 
         # Z Normalization
         motion = (motion - self.mean) / self.std
 
         tasks = self.tasks[task_idx]
 
-        return caption, m_tokens, m_tokens_len, motion, motion_len, None, None, None, None, all_captions, tasks, fname
+        return caption, None, None, motion, m_length, None, None, None, None, all_captions, tasks, fname
         # text, m_tokens, m_tokens_len, motion, length, word_embs, pos_ohot, text_len, tokens, all_captions ,tasks, fname

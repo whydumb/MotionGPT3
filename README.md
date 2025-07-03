@@ -141,6 +141,13 @@ The outputs:
 
 2. Put the instructions data in `prepare/instructions` to the same folder of HumanML3D dataset.
 
+4. (Optional) Refer to [MotionGPT-Training guidance](https://github.com/OpenMotionLab/MotionGPT/tree/main#22-ready-to-pretrain-motiongpt-model) to generate motion code for VQ-based training.
+    ```
+    bash prepare/download_motiongpt_pretrained_models.sh
+    python -m scripts.get_motion_code --cfg configs/config_motiongpt.yaml
+    ```
+
+
 ### 2.1. Ready to train MotionGPT3 model
 
 Please first check the parameters in `configs/MoT_vae_stage1_t2m.yaml`, e.g. `NAME`, `instruction_type`, `lm_ablation`, `DEBUG`.
@@ -243,15 +250,15 @@ optional parameters:
 If you find our code or paper helps, please consider citing:
 
 ```bibtex
-@misc{zhu2025motiongpt3humanmotionsecond,
-  title={MotionGPT3: Human Motion as a Second Modality}, 
-  author={Bingfan Zhu and Biao Jiang and Sunyi Wang and Shixiang Tang and Tao Chen and Linjie Luo and Youyi Zheng and Xin Chen},
-  year={2025},
-  eprint={2506.24086},
-  archivePrefix={arXiv},
-  primaryClass={cs.CV},
-  url={https://arxiv.org/abs/2506.24086}, 
-}
+  @misc{zhu2025motiongpt3humanmotionsecond,
+    title={MotionGPT3: Human Motion as a Second Modality}, 
+    author={Bingfan Zhu and Biao Jiang and Sunyi Wang and Shixiang Tang and Tao Chen and Linjie Luo and Youyi Zheng and Xin Chen},
+    year={2025},
+    eprint={2506.24086},
+    archivePrefix={arXiv},
+    primaryClass={cs.CV},
+    url={https://arxiv.org/abs/2506.24086}, 
+  }
 ```
 
 ## Acknowledgments

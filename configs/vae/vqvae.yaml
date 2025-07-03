@@ -1,4 +1,4 @@
-target: mGPT.archs.mgpt_vq.VQVae
+target: motGPT.archs.mgpt_vq.VQVae
 params:
   quantizer: 'ema_reset'
   code_num: 512

@@ -44,9 +44,9 @@ class Text2MotionDataset(data.Dataset):
         split_file = pjoin(data_root, split + '.txt')
         # motion_dir = pjoin(data_root, 'new_joint_vecs')
         # text_dir = pjoin(data_root, 'texts')
-        code_dir = pjoin(data_root, code_path)
         motion_dir = motion_dir if motion_dir is not None else pjoin(data_root, 'new_joint_vecs')
         text_dir = text_dir if text_dir is not None else pjoin(data_root, 'texts')
+        # code_dir = pjoin(data_root, code_path)
 
         # Data id list
         self.id_list = []
@@ -99,12 +99,6 @@ class Text2MotionDataset(data.Dataset):
                     break
                 try:
                     motion = np.load(pjoin(motion_dir, name + ".npy"))
-
-                    # try:
-                    m_token_list = np.load(pjoin(code_dir, f'{name}.npy'))
-                    # except:
-                    #     continue
-
                     # Read text
                     text_data = []
                     flag = False
@@ -126,29 +120,14 @@ class Text2MotionDataset(data.Dataset):
                                 flag = True
                                 text_data.append(text_dict)
                             else:
-                                m_token_list_new = [
-                                    tokens[int(f_tag * fps / unit_length
-                                                ):int(to_tag * fps / unit_length)]
-                                    for tokens in m_token_list
-                                ]
                                 motion_new = motion[int(f_tag *
                                                         fps):int(to_tag * fps)]
                                 if (len(motion_new)) < self.min_motion_length or (
                                         len(motion_new) >= self.max_motion_length):
                                     continue
-                                # new_name = '%s_%f_%f' % (name, f_tag,
-                                #                             to_tag)
-                                new_name = random.choice(
-                                    'ABCDEFGHIJKLMNOPQRSTUVW') + '_' + name
-                                while new_name in new_name_list:
-                                    new_name = random.choice(
-                                        'ABCDEFGHIJKLMNOPQRSTUVW') + '_' + name
-                                # name_count = 1
-                                # while new_name in data_dict:
-                                #     new_name += '_' + name_count
-                                #     name_count += 1
+                                new_name = '%s_%f_%f' % (name, f_tag, to_tag)
+
                                 data_dict[new_name] = {
-                                    'm_token_list': m_token_list_new,
                                     'motion': motion_new,
                                     "length": len(motion_new),
                                     'text': [text_dict]
@@ -159,7 +138,6 @@ class Text2MotionDataset(data.Dataset):
                     if flag and (not (len(motion)) < self.min_motion_length or (
                         len(motion) >= self.max_motion_length)):
                         data_dict[name] = {
-                            'm_token_list': m_token_list,
                             'motion': motion,
                             "length": len(motion),
                             'text': text_data
