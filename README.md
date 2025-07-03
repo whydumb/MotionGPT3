@@ -243,7 +243,15 @@ optional parameters:
 If you find our code or paper helps, please consider citing:
 
 ```bibtex
-<!-- todo bibtex -->
+@misc{zhu2025motiongpt3humanmotionsecond,
+  title={MotionGPT3: Human Motion as a Second Modality}, 
+  author={Bingfan Zhu and Biao Jiang and Sunyi Wang and Shixiang Tang and Tao Chen and Linjie Luo and Youyi Zheng and Xin Chen},
+  year={2025},
+  eprint={2506.24086},
+  archivePrefix={arXiv},
+  primaryClass={cs.CV},
+  url={https://arxiv.org/abs/2506.24086}, 
+}
 ```
 
 ## Acknowledgments
