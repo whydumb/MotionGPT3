@@ -3,7 +3,7 @@ import math
 import bpy
 import numpy as np
 
-from mGPT.utils.joints import (humanml3d_joints, humanml3d_kinematic_tree,
+from motGPT.utils.joints import (humanml3d_joints, humanml3d_kinematic_tree,
                                mmm_joints, mmm_kinematic_tree,
                                mmm_to_smplh_scaling_factor)
 

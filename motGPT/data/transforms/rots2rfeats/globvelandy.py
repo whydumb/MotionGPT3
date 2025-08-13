@@ -20,8 +20,8 @@ import torch
 from torch import Tensor
 from einops import rearrange
 
-from mGPT.utils.easyconvert import rep_to_rep, nfeats_of, to_matrix
-import mGPT.utils.geometry_tools as geometry_tools
+from motGPT.utils.easyconvert import rep_to_rep, nfeats_of, to_matrix
+import motGPT.utils.geometry_tools as geometry_tools
 
 from .base import Rots2Rfeats
 

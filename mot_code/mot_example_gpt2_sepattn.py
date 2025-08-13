@@ -62,6 +62,7 @@ class MoTGPT2LMHeadModel(GPT2LMHeadModel):
         config.mot_factor = self.mot_factor
 
         all_layers_idx = list(range(config.num_hidden_layers))
+        config.text_cross_model_attention = all_layers_idx[-1:]
         if attention_mode == 'all':
             config.cross_model_attention = all_layers_idx
         elif attention_mode == 'first':
@@ -72,6 +73,12 @@ class MoTGPT2LMHeadModel(GPT2LMHeadModel):
             config.cross_model_attention = all_layers_idx[:config.num_hidden_layers//2]
         elif attention_mode == 'halfB':
             config.cross_model_attention = all_layers_idx[-config.num_hidden_layers//2:]
+        elif attention_mode == 'firstthird':
+            config.cross_model_attention = all_layers_idx[:config.num_hidden_layers//3]
+        elif attention_mode == 'midthird':
+            config.cross_model_attention = all_layers_idx[config.num_hidden_layers//3:int(config.num_hidden_layers/3*2)]
+        elif attention_mode == 'lastthird':
+            config.cross_model_attention = all_layers_idx[int(config.num_hidden_layers/3*2):]
         elif attention_mode == 'odd':
             config.cross_model_attention = all_layers_idx[::2]
         elif attention_mode == 'even':
@@ -84,6 +91,8 @@ class MoTGPT2LMHeadModel(GPT2LMHeadModel):
             config.cross_model_attention = all_layers_idx[:lnum]
         elif attention_mode == 'None':
             config.cross_model_attention = []
+        else:
+            assert False, f'not recognized attention_mode {attention_mode}'
 
         self.transformer = MoTGPT2Model(config, modality_num=modality_num)
         
@@ -482,6 +491,7 @@ class MoTGPT2LMHeadModel(GPT2LMHeadModel):
                 if output_hidden_states:
                     for i in range(self.modality_num):
                         decoder_hidden_states[i].append(outputs.hidden_states[-1][i][:,-1:,:])
+
             del outputs
 
         # all_type_ids == torch.cat([all_type_ids,torch.full((batch_size,1), self.current_mod_id)])
@@ -489,14 +499,27 @@ class MoTGPT2LMHeadModel(GPT2LMHeadModel):
             input_ids[all_type_ids==i] += modality_info.token_id_start
         input_ids = input_ids[:,input_ids_length:]
         if return_dict_in_generate:
-            return GenerateDecoderOnlyOutput(
-                sequences=input_ids,
-                # scores=scores,
-                # logits=raw_logits,
-                # attentions=decoder_attentions,
-                hidden_states=decoder_hidden_states,
-                past_key_values=model_kwargs.get("past_key_values"),
-            )
+            if self.config.is_encoder_decoder:
+                return GenerateEncoderDecoderOutput(
+                    sequences=input_ids,
+                    # scores=scores,
+                    logits=raw_logits,
+                    # encoder_attentions=encoder_attentions,
+                    # encoder_hidden_states=encoder_hidden_states,
+                    # decoder_attentions=decoder_attentions,
+                    # cross_attentions=cross_attentions,
+                    decoder_hidden_states=decoder_hidden_states,
+                    past_key_values=model_kwargs.get("past_key_values"),
+                )
+            else:
+                return GenerateDecoderOnlyOutput(
+                    sequences=input_ids,
+                    # scores=scores,
+                    # logits=raw_logits,
+                    # attentions=decoder_attentions,
+                    hidden_states=decoder_hidden_states,
+                    past_key_values=model_kwargs.get("past_key_values"),
+                )
         else:
             return input_ids
         

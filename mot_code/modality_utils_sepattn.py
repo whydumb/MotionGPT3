@@ -97,7 +97,7 @@ class MoTCrossEntropyLoss(MoTLoss):
     def __init__(self, ignore_index=-100):
         super().__init__()
         self.loss_fct = torch.nn.CrossEntropyLoss(ignore_index=ignore_index)
-                
+        
 class MotL2Loss(nn.Module):
     def __init__(self):
         super().__init__()
@@ -139,13 +139,11 @@ def get_modalities_infos(config, tokenizer)-> dict:
     motion_gen_head = nn.Linear(config.mot_embed_dim, config.motion_vocab_size, bias=False)
     # torch.nn.init.normal_(motion_und_head, std=.02)
     torch.nn.init.normal_(motion_gen_head.weight, mean=0.0, std=.01)
-    
-    # if not hasattr(config, 'mot_loss'):
-    #     config.mot_loss = 'ce'
+
     if config.mot_loss == 'ce':
-        mod_loss_fct = MoTCrossEntropyLoss(ignore_index=-100) if config.is_encoder_decoder else MoTShiftCrossEntropyLoss(ignore_index=-100)
+        mot_loss_fct = MoTCrossEntropyLoss(ignore_index=-100) if config.is_encoder_decoder else MoTShiftCrossEntropyLoss(ignore_index=-100)
     elif config.mot_loss in ['l2', 'skip']:
-        mod_loss_fct = MoTLoss(LossSkip())
+        mot_loss_fct=MoTLoss(LossSkip())
     else:
         assert False, f'unknown mot_loss, {config.mot_loss}'
 
@@ -160,7 +158,7 @@ def get_modalities_infos(config, tokenizer)-> dict:
         msk_id=msk_id - token_id_start,
         pre_processor=motion_und_head,
         post_processor=motion_gen_head,
-        loss_fct=mod_loss_fct,
+        loss_fct=mot_loss_fct,
         # loss_fct=torch.nn.CrossEntropyLoss(ignore_index=-100)
         )
     info_list.append(motion_modality_info)

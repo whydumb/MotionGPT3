@@ -23,7 +23,6 @@ class ResConv1DBlock(nn.Module):
         elif norm == "BN":
             self.norm1 = nn.BatchNorm1d(num_features=n_in, eps=1e-6, affine=True)
             self.norm2 = nn.BatchNorm1d(num_features=n_in, eps=1e-6, affine=True)
-        
         else:
             self.norm1 = nn.Identity()
             self.norm2 = nn.Identity()
@@ -40,8 +39,6 @@ class ResConv1DBlock(nn.Module):
             self.activation1 = nn.GELU()
             self.activation2 = nn.GELU()
             
-        
-
         self.conv1 = nn.Conv1d(n_in, n_state, 3, 1, padding, dilation)
         self.conv2 = nn.Conv1d(n_state, n_in, 1, 1, 0,)     
 

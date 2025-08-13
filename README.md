@@ -79,6 +79,12 @@ For Text to Motion Evaluation
 bash prepare/download_t2m_evaluators.sh
 ```
 
+For pre-trained MotionVAE:
+
+```
+bash prepare/download_mld_pretrained_models.sh
+```
+
 <!-- ### 3. Pre-trained model
 
 Run the script to download the pre-trained model
@@ -91,7 +97,7 @@ bash prepare/download_pretrained_models.sh
 
 Visit [the Google Driver](https://drive.google.com/drive/folders/xxx) to download the previous dependencies.
 
-Visit [XXX](https://XXXXXX) to download the pretrained models. -->
+Visit [the Hugging Face](https://XXXXXX) to download the pretrained models. -->
 
 </details>
 

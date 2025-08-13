@@ -6,7 +6,7 @@ from .humanml.utils.word_vectorizer import WordVectorizer
 from .humanml.scripts.motion_process import (process_file, recover_from_ric)
 from . import BASEDataModule
 from .humanml import (
-    Text2MotionDataset, Text2MotionDatasetCB, MotionDatasetVQ, Text2MotionDatasetToken, 
+    Text2MotionDataset, Text2MotionDatasetCB, MotionDataset, MotionDatasetVQ, Text2MotionDatasetToken, 
     Text2MotionDatasetCBV3, Text2MotionDatasetEvalV3
 )
 from .utils import humanml3d_collate
@@ -105,12 +105,12 @@ class HumanML3DDataModule(BASEDataModule):
         features = features * std + mean
         return recover_from_ric(features, self.njoints)
 
-    # def joints2feats(self, features):
-    #     example_data = np.load(os.path.join(self.hparams.data_root, 'joints', '000021.npy'))
-    #     example_data = example_data.reshape(len(example_data), -1, 3)
-    #     example_data = torch.from_numpy(example_data)
-    #     features = process_file(features, self.njoints, example_data, 't2m')[0]
-    #     return features
+    def joints2feats(self, features):
+        example_data = np.load(os.path.join(self.hparams.data_root, 'joints', '000021.npy'))
+        example_data = example_data.reshape(len(example_data), -1, 3)
+        example_data = torch.from_numpy(example_data)
+        features = process_file(features, self.njoints, example_data, 't2m')[0]
+        return features
 
     def normalize(self, features):
         mean = torch.tensor(self.hparams.mean).to(features)

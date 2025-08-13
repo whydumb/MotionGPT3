@@ -20,8 +20,8 @@ from typing import Optional
 import torch
 from einops import rearrange
 from torch import Tensor
-from mGPT.utils.joints import smplh_to_mmm_scaling_factor
-from mGPT.utils.joints import smplh2mmm_indexes
+from motGPT.utils.joints import smplh_to_mmm_scaling_factor
+from motGPT.utils.joints import smplh2mmm_indexes
 from .base import Rots2Joints
 
 
@@ -151,16 +151,16 @@ class SMPLH(Rots2Joints):
 
 
 def smplh_to(jointstype, data, trans):
-    from mGPT.utils.joints import get_root_idx
+    from motGPT.utils.joints import get_root_idx
 
     if "mmm" in jointstype:
-        from mGPT.utils.joints import smplh2mmm_indexes
+        from motGPT.utils.joints import smplh2mmm_indexes
         indexes = smplh2mmm_indexes
         data = data[..., indexes, :]
 
         # make it compatible with mmm
         if jointstype == "mmm":
-            from mGPT.utils.joints import smplh_to_mmm_scaling_factor
+            from motGPT.utils.joints import smplh_to_mmm_scaling_factor
             data *= smplh_to_mmm_scaling_factor
 
         if jointstype == "smplmmm":
@@ -172,7 +172,7 @@ def smplh_to(jointstype, data, trans):
             data[..., 2] = -data[..., 2]
 
     elif jointstype == "smplnh":
-        from mGPT.utils.joints import smplh2smplnh_indexes
+        from motGPT.utils.joints import smplh2smplnh_indexes
         indexes = smplh2smplnh_indexes
         data = data[..., indexes, :]
     elif jointstype == "smplh":

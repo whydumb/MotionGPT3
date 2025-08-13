@@ -9,14 +9,13 @@ from . import create_diffusion
 class DiffLoss(nn.Module):
     """Diffusion Loss"""
     def __init__(self, target_channels, z_channels, depth, width, num_sampling_steps, 
-                 noise_schedule='linear', learn_sigma=False, sigma_small=True,
+                 noise_schedule='linear', use_kl=False, learn_sigma=False, sigma_small=True,
                  target_size=None, multi_hidden=False, grad_checkpointing=False,
-                 pe_type=None, use_kl=False):
+                 pe_type=None,):
         super(DiffLoss, self).__init__()
         self.in_size = target_size
         self.in_channels = target_channels
         self.multi_hidden = multi_hidden
-        
         out_channels = target_channels + target_channels*learn_sigma  # *2 for vlb loss， while learn_sigma=True
         self.net = SimpleMLPAdaLN(
             in_size=target_size,
@@ -31,9 +30,9 @@ class DiffLoss(nn.Module):
         )
 
         self.train_diffusion = create_diffusion(timestep_respacing="", noise_schedule=noise_schedule, 
-                                                use_kl=use_kl,learn_sigma=learn_sigma, sigma_small=sigma_small)
+                                                use_kl=use_kl, learn_sigma=learn_sigma, sigma_small=sigma_small)
         self.gen_diffusion = create_diffusion(timestep_respacing=num_sampling_steps, noise_schedule=noise_schedule, 
-                                                use_kl=use_kl,learn_sigma=learn_sigma, sigma_small=sigma_small)
+                                                use_kl=use_kl, learn_sigma=learn_sigma, sigma_small=sigma_small)
 
     def forward(self, target, z, mask=None):
         t = torch.randint(0, self.train_diffusion.num_timesteps, (target.shape[0],), device=target.device)
@@ -150,7 +149,7 @@ class ResBlock(nn.Module):
                 nn.ReLU(),
                 nn.Linear(channels, channels, bias=True),
             )
-            # from mld.models.operator.cross_attention import TransformerEncoderLayer
+            # from motGPT.archs.operator.cross_attention import TransformerEncoderLayer
             # ff_size = int(channels*mlp_ratio)
             # self.hid_encoder_layer = TransformerEncoderLayer(
             #     channels, num_heads, ff_size, dropout, activation, normalize_before,

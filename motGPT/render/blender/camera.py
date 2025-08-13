@@ -9,8 +9,8 @@ class Camera:
         camera.location.x = 7.36
         camera.location.y = -6.93
         if is_mesh:
-            camera.location.z = 5.8
-            # camera.location.z = 6.0
+            # camera.location.z = 5.45
+            camera.location.z = 5.6
         else:
             camera.location.z = 5.2
 
@@ -19,7 +19,6 @@ class Camera:
             if is_mesh:
                 camera.data.lens = 65
             else:
-                
                 camera.data.lens = 85
         elif mode == "frame":
             if is_mesh:
@@ -28,7 +27,6 @@ class Camera:
                 camera.data.lens = 85
         elif mode == "video":
             if is_mesh:
-                # camera.data.lens = 130
                 camera.data.lens = 110
             else:
                 # avoid cutting person

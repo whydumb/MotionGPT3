@@ -12,7 +12,7 @@ from motGPT.render.pyrender.smpl_render import SMPLRender
 
 SMPL_MODEL_PATH = 'deps/smpl_models/smpl'
 
-def render_motion(data, feats, output_dir, fname=None, method='fast', smpl_model_path=SMPL_MODEL_PATH, fps=20.):
+def render_motion(data, feats, output_dir, fname=None, method='fast', smpl_model_path=SMPL_MODEL_PATH, fps=20):
     if fname is None:
         fname = time.strftime("%Y-%m-%d-%H_%M_%S", time.localtime(
             time.time())) + str(np.random.randint(10000, 99999))
@@ -51,7 +51,7 @@ def render_motion(data, feats, output_dir, fname=None, method='fast', smpl_model
 
         # out = np.stack(vid, axis=0)
         out_video = mp.ImageSequenceClip(vid, fps=fps)
-        out_video.write_videofile(output_mp4_path,fps=fps)
+        out_video.write_videofile(output_mp4_path, fps=fps)
         del render
 
     elif method == 'fast':
@@ -63,11 +63,7 @@ def render_motion(data, feats, output_dir, fname=None, method='fast', smpl_model
         pose_vis = plot_3d.draw_to_batch(data, [''], None, fps=fps)[0].cpu().numpy()
 
         out_video = mp.ImageSequenceClip(list(pose_vis),fps=fps)
-        out_video.write_videofile(output_mp4_path)
+        out_video.write_videofile(output_mp4_path, fps=fps)
+        # out_video = mp.VideoClip(make_frame=lambda t:pose_vis[int(t*fps)], duration=len(pose_vis)/fps)
+        # out_video.write_videofile(output_mp4_path,fps=fps)
         del pose_vis
-
-
-if __name__ == '__main__':
-    data_path = r'E:\datasets\AMASS\vector_263\humanml\000019.npy'
-    motion = np.load(data_path)
-    render_motion(motion, None, 'E:/datasets/AMASS', '000019_vis')

@@ -300,6 +300,7 @@ class MLM(nn.Module):
             if condition == 'supervised' else None,
         )
 
+        torch.cuda.empty_cache()
         return outputs
 
     def forward_dec(
@@ -356,6 +357,7 @@ class MLM(nn.Module):
             labels=labels_input_ids,
             )
 
+        torch.cuda.empty_cache()
         return outputs
 
     def generate_direct(self,

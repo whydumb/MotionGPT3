@@ -8,7 +8,7 @@ import torch.nn.functional as F
 from torch import Tensor, nn
 from torch.distributions.distribution import Distribution
 
-from motGPT.archs.tools.embeddings import TimestepEmbedding, Timesteps
+# from motGPT.archs.tools.embeddings import TimestepEmbedding, Timesteps
 from motGPT.archs.operator import PositionalEncoding
 from motGPT.archs.operator.cross_attention import (
     SkipTransformerEncoder,
@@ -18,8 +18,8 @@ from motGPT.archs.operator.cross_attention import (
     TransformerEncoder,
     TransformerEncoderLayer,
 )
-from motGPT.archs.operator.position_encoding import build_position_encoding
-# from mld.utils.temos_utils import lengths_to_mask
+from motGPT.models.utils.position_encoding import build_position_encoding
+from motGPT.utils.temos_utils import lengths_to_mask
 """
 vae
 
@@ -28,15 +28,6 @@ skip connection decoder
 
 mem for each decoder layer
 """
-
-def lengths_to_mask(lengths: List[int],
-                    device: torch.device,
-                    max_len: int = None) -> Tensor:
-    lengths = torch.tensor(lengths, device=device)
-    max_len = max_len if max_len else max(lengths)
-    mask = torch.arange(max_len, device=device).expand(
-        len(lengths), max_len) < lengths.unsqueeze(1)
-    return mask
 
 
 class MldVae(nn.Module):
@@ -72,6 +63,8 @@ class MldVae(nn.Module):
         else:
             # humanml3d_vae:
             self.mean_std_inv = 0.8457  # 0.6769 for 4/5; 0.8457 for 4/9
+            self.mean_std_inv_2 = self.mean_std_inv**2
+            # 0.71521
             self.mean_mean = -0.1379  # -0.1379 for 4/5; -0.1463 for 4/9
 
         if self.pe_type == "actor":

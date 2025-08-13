@@ -5,7 +5,7 @@ import torch
 import time
 from motGPT.config import instantiate_from_config
 from os.path import join as pjoin
-from motGPT.losses.motgpt import MLDLosses
+from motGPT.losses.motgpt import MotLosses
 from motGPT.models.base import BaseModel
 from .base import BaseModel
 import json
@@ -30,12 +30,13 @@ class MotGPT(BaseModel):
                  datamodule,
                  lm,
                  motion_vae,
+                 codebook_size=512,
                  stage='vae',
                  debug=True,
                  condition='text',
                  task='t2m',
                  metrics_dict=['TM2TMetrics'],
-                #  fps=20,
+                 fps=20,
                  guidance_scale=1.0,
                  **kwargs):
 
@@ -43,6 +44,7 @@ class MotGPT(BaseModel):
         self.datamodule = datamodule
         self.njoints = self.datamodule.njoints
         self.fps = self.datamodule.fps
+        # self.ep = 0
         super().__init__()
 
         # Instantiate motion tokenizer
@@ -83,7 +85,7 @@ class MotGPT(BaseModel):
 
         # Instantiate the losses
         self._losses = torch.nn.ModuleDict({
-            split: MLDLosses(cfg, self.hparams.stage, self.datamodule.njoints)
+            split: MotLosses(cfg, self.hparams.stage, self.datamodule.njoints)
             for split in ["losses_train", "losses_test", "losses_val"]
         })
 
@@ -105,6 +107,7 @@ class MotGPT(BaseModel):
     #     else:
     #         self.total_loss += loss
     #     return loss
+
     def training_step(self, batch, batch_idx):
         opt1, opt2 = self.optimizers()
         loss = self.allsplit_step("train", batch, batch_idx)
@@ -114,6 +117,30 @@ class MotGPT(BaseModel):
         opt1.step()
         opt2.step()
         return loss
+    
+    # {def training_step(self, batch, batch_idx):
+    #     opt1, opt2 = self.optimizers()
+    #     loss = self.allsplit_step("train", batch, batch_idx)
+    #     self.manual_backward(loss)
+    #     if (self.ep +1) % self.accumulation_steps == 0:
+    #         opt1.step()
+    #         opt2.step()
+    #         opt1.zero_grad()
+    #         opt2.zero_grad()
+    #     self.ep += 1
+    #     return loss
+
+    # def on_train_batch_start(self, batch, batch_idx):
+    #     opt1, opt2 = self.optimizers()
+    #     opt1.zero_grad()
+    #     opt2.zero_grad()
+    #     return super().on_train_batch_start(batch, batch_idx)
+    
+    # def on_train_epoch_end(self):
+    #     opt1, opt2 = self.optimizers()
+    #     opt1.step()
+    #     opt2.step()
+    #     return super().on_train_epoch_end()}
 
     def configure_optimizers(self):
         from motGPT.config import get_obj_from_str
@@ -122,7 +149,6 @@ class MotGPT(BaseModel):
         if len(optim_target.split('.')) == 1:
             optim_target = 'torch.optim.' + optim_target
 
-        # optimizers_0 = self.parameters()
         optimizers_0 = [*self.vae.parameters(), *self.lm.language_model.parameters()]
         optimizer = get_obj_from_str(optim_target)(
             params=optimizers_0, **self.hparams.cfg.TRAIN.OPTIM.params)
@@ -151,7 +177,7 @@ class MotGPT(BaseModel):
             optimizer=optimizer, **self.hparams.cfg.TRAIN.LR_SCHEDULER.params)
 
         return ({'optimizer': optimizer, 'lr_scheduler': lr_scheduler}, 
-                {"optimizer": optimizer_diff},)
+                {"optimizer": optimizer_diff})
 
         
     def forward(self, batch, task="t2m"):
@@ -161,22 +187,20 @@ class MotGPT(BaseModel):
         if task in ['inbetween']:
             lengths = lengths_ref
         else:
-            lengths = [random.randint(15,25)*4 for l in lengths_ref]
-        # feats_ref = batch['motion']
+            lengths = [random.randint(20,50)*4 for l in lengths_ref]
         motion_tokens_input = batch['motion_tokens_input']
 
         if task in ['t2m', 'pred', 'prediction', 'inbetween']:
             outputs = self.lm.generate_direct_motion(
                     texts,
                     motion_tokens=motion_tokens_input,
-                    # fixed_motion_length=1,
                     num_beams=1,
                     do_sample=False,
                     )
             sampled_token_latents, motion_mask = self.lm.sample_tokens(
                 outputs, self.lm.device, 
                 temperature=1.0, cfg=self.guidance_scale, 
-            vae_mean_std_inv=self.vae.mean_std_inv) # , cfg_schedule="linear"
+            vae_mean_std_inv=self.vae.mean_std_inv_2) # , cfg_schedule="linear"
             sampled_token_latents = sampled_token_latents.reshape(len(lengths), self.vae.latent_size, -1).permute(1,0,2)  # [1,bs,256]
             feats_rst = self.vae.decode(sampled_token_latents, lengths=lengths)
 
@@ -199,7 +223,7 @@ class MotGPT(BaseModel):
                 num_beams=1,
                 do_sample=True,
                 gen_mode='text',
-                # bad_words_ids=self.bad_words_ids
+                bad_words_ids=[[self.lm.som_id], [self.lm.eom_id]]
             )
             gen_texts = cleaned_text
             # return set
@@ -210,7 +234,7 @@ class MotGPT(BaseModel):
                 "length": None,
             }
         else:
-            assert False, 'Not implemented yet'
+            assert False, f'{task} Not implemented yet'
             
         return outputs
 
@@ -225,13 +249,43 @@ class MotGPT(BaseModel):
 
         # LLM Forward
         outputs = self.lm(texts, feats_ref, self.vae, lengths, tasks)
-
         # coef = sig(self.current_epoch/10.)*2-1
         # outputs.loss  = outputs.loss *coef
         return {'outputs': outputs,
                 # 'xstart': xstart,
                 # 'hidden': hidden,
                 }
+    
+    @torch.no_grad()
+    def val_t2t_forward(self, batch):
+        # feats_ref = batch["motion"]
+        texts = batch["text"]
+        # lengths = batch["length"]
+        # all_captions = batch['all_captions']
+        # tasks = None
+        tasks = [{
+                'input': ['<Caption_Placeholder>'],
+                'output': ['']
+            }] * len(texts)
+        
+        with torch.no_grad():
+            outputs = self.lm.generate_conditional(texts,
+                                                # lengths=lengths,
+                                                stage='test',
+                                                task='t2t',
+                                                tasks=tasks,
+                                                #    output_hidden_states=True
+                                                )
+
+        rs_set = {
+            # "m_ref": feats_ref,
+            # "t_ref": all_captions,
+            # "t_ref": texts,
+            "t_pred": outputs,
+            # "length": lengths
+        }
+
+        return rs_set
 
     @torch.no_grad()
     def val_t2m_forward(self, batch):
@@ -260,17 +314,19 @@ class MotGPT(BaseModel):
             instructions = json.load(open(instructions, 'r'))
             tasks = [instructions["Text-to-Motion"]["t2m"]] * len(texts)
 
+        # Forward, return decoder_hidden_states[-1] 
         with torch.no_grad():
             outputs = self.lm.generate_conditional(texts,
                                                 lengths=lengths,
                                                 stage='test',
                                                 tasks=tasks,
                                                 )
-            
+        # outputs: 32,8,768
+        # todo: allow more motion sequence in output 
         sampled_token_latents, motion_mask = self.lm.sample_tokens(
             outputs, feats_ref.device, 
             temperature=1.0, cfg=self.guidance_scale, 
-            vae_mean_std_inv=self.vae.mean_std_inv) # , cfg_schedule="linear"
+            vae_mean_std_inv=self.vae.mean_std_inv_2) # , cfg_schedule="linear"
         sampled_token_latents = sampled_token_latents.reshape(len(lengths), self.vae.latent_size, -1).permute(1,0,2)  # [1,bs,256]
         
         feats_rst = self.vae.decode(sampled_token_latents, lengths)  #[bs,lengths,263]
@@ -342,12 +398,11 @@ class MotGPT(BaseModel):
         sampled_token_latents, motion_mask = self.lm.sample_tokens(
             outputs, feats_ref.device, 
             temperature=1.0, cfg=self.guidance_scale, 
-            vae_mean_std_inv=self.vae.mean_std_inv) # , cfg_schedule="linear"
+            vae_mean_std_inv=self.vae.mean_std_inv_2) # , cfg_schedule="linear"
         sampled_token_latents = sampled_token_latents.reshape(len(lengths), self.vae.latent_size, -1).permute(1,0,2)  # [1,bs,256]
-        
-        feats_rst = self.vae.decode(sampled_token_latents, lengths)  #[bs,lengths,263]
+        feats_rst = self.vae.decode(sampled_token_latents, lengths)  # [bs,lengths,263]
         feats_rst[motion_mask==1] = torch.zeros_like(feats_ref[0, ...])
-
+        
         # Recover joints for evaluation
         joints_ref = self.feats2joints(feats_ref)
         joints_rst = self.feats2joints(feats_rst)
@@ -407,6 +462,7 @@ class MotGPT(BaseModel):
         # Detach batch
         feats_ref = batch["motion"].detach().clone()
         lengths = batch["length"]
+        # print('lengths', lengths)
 
         # Repeat for multimodal evaluation
         if self.trainer.datamodule.is_mm:
@@ -462,11 +518,14 @@ class MotGPT(BaseModel):
                     rs_set = self.val_t2m_forward(batch)
                 elif self.hparams.task == "m2t":
                     rs_set = self.val_m2t_forward(batch)
+                # elif self.hparams.task == "t2t":
+                #     rs_set = self.val_t2t_forward(batch)
                 elif self.hparams.task in ["m2m", "pred", "inbetween"]:
                     rs_set = self.val_m2m_forward(batch, self.hparams.task)
 
-            if self.hparams.task not in ["m2t"]:
-                if batch_idx == 0:
+            if self.hparams.task not in ["m2t","t2t"]:
+                # if batch_idx == 0:
+                if (self.current_epoch+1) and batch_idx == 0 and self.global_rank == 0:
                     lengths = batch['length']
                     feats_ref, joints_ref = rs_set['m_ref'], rs_set['joints_ref']
                     feats_rst, joints_rst = rs_set['m_rst'], rs_set['joints_rst']
@@ -567,7 +626,7 @@ class MotGPT(BaseModel):
             elif self.hparams.task == "m2t" and self.hparams.stage in [
                     "lm_instruct", "lm_t2m", "lm_pretrain", "lm_finetune", "lm_rl", "lm_adaptor_pretrain"
             ]:
-                if batch_idx == 0:
+                if batch_idx == 0 and self.global_rank == 0:
                     feats_ref = rs_set['m_ref']
                     gen_texts = rs_set["t_pred"]
 

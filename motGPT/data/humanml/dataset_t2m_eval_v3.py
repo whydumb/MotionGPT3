@@ -33,7 +33,7 @@ class Text2MotionDatasetEvalV3(Text2MotionDataset):
         idx = self.pointer + item
         fname = self.name_list[idx]
         data = self.data_dict[fname]
-        motion, text_list = data["motion"], data["text"]
+        motion, m_length, text_list = data["motion"], data["length"], data["text"]
 
         # all_captions = [
         #     ' '.join([token.split('/')[0] for token in text_dic['tokens']])
@@ -53,6 +53,7 @@ class Text2MotionDatasetEvalV3(Text2MotionDataset):
 
         # Randomly select a caption
         text_data = random.choice(text_list)
+        # text_data = text_list[0]
         caption, tokens = text_data["caption"], text_data["tokens"]
         # Text
         max_text_len = 20
@@ -76,19 +77,17 @@ class Text2MotionDatasetEvalV3(Text2MotionDataset):
         word_embeddings = np.concatenate(word_embeddings, axis=0)
         
         # Random crop
-        coin = np.random.choice([False, False, True])
         m_length = motion.shape[0]
+        coin = np.random.choice([False, False, True])
         if coin:
-            # drop one token at the head or tail
-            coin2 = np.random.choice([True, False])
-            if coin2:
-                m_length = (m_length // self.unit_length - 1) * self.unit_length
-            else:
-                m_length = (m_length // self.unit_length) * self.unit_length
-
+            m_length = (m_length // self.unit_length - 1) * self.unit_length
+        else:
+            m_length = (m_length // self.unit_length) * self.unit_length
+        
+        # idx = 0
         idx = random.randint(0, len(motion) - m_length)
         motion = motion[idx:idx + m_length]
-        
+
         # Z Normalization
         motion = (motion - self.mean) / self.std
 

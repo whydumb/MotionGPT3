@@ -4,7 +4,7 @@ import numpy as np
 import torch
 from torch import Tensor
 
-import mGPT.utils.geometry_conver as geometry_conver
+import motGPT.utils.geometry_conver as geometry_conver
 
 
 def lengths_to_mask(lengths: List[int],

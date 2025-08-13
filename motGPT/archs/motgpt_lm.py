@@ -10,8 +10,8 @@ from torch.distributions.distribution import Distribution
 from transformers import AutoModelForSeq2SeqLM, T5ForConditionalGeneration, T5Tokenizer, AutoTokenizer, GPT2LMHeadModel, GPT2Tokenizer
 import random
 from typing import Optional
-from ..config import instantiate_from_config
 # from .tools.token_emb import NewTokenEmb
+from ..config import instantiate_from_config
 
 
 class MotionUndHead(nn.Module):
@@ -44,6 +44,10 @@ class MotionUndHead(nn.Module):
         motion_embedding = self.layers(motion_tokens)
         return motion_embedding
 
+def mask_grad(grad, allowed_ids):
+    mask = torch.zeros_like(grad)
+    mask[allowed_ids] = 1
+    return grad * mask
 
 class MLM(nn.Module):
 
@@ -98,9 +102,6 @@ class MLM(nn.Module):
         self.quota_ratio = quota_ratio
         self.stage = stage
 
-        self.with_hid_norm = with_hid_norm
-        self.with_vae_latent_norm = with_vae_latent_norm
-
         self.motion_holder_output_word = '<motion_latent_holder_output>'
         self.motion_holder_word = '<motion_latent_holder>'
         self.som_word, self.eom_word = '<start_of_motion>', '<end_of_motion>'
@@ -117,10 +118,8 @@ class MLM(nn.Module):
 
         self.motion_holder_repeat = motion_holder_repeat
         self.holder_num_in_input = holder_num_in_input
-        # self.diff_with_norm = False
-        self.masked_holder_seq = self.mom_word*self.motion_holder_repeat
 
-        motion_holder_seq_mode = 'withse'
+        motion_holder_seq_mode = motion_holder_seq_mode
         if motion_holder_seq_mode == 'withse':
         # self.motion_holder_seq = '<motion_latent_holder>'*self.motion_holder_repeat
             self.output_motion_holder_seq = '<start_of_motion>'+self.motion_holder_output_word*self.motion_holder_repeat+'<end_of_motion>'
@@ -128,21 +127,16 @@ class MLM(nn.Module):
         elif motion_holder_seq_mode == 'alone':
             self.output_motion_holder_seq = self.motion_holder_output_word*self.motion_holder_repeat
             self.input_motion_holder_seq = self.motion_holder_word*self.holder_num_in_input
+        self.masked_holder_seq = self.mom_word*self.motion_holder_repeat
         print('mldgpt_z_lm_mot.MLM loaded', all_motion_token_num)
 
         if model_type == "t5":
             assert False
-            # lm = T5ForConditionalGeneration.from_pretrained(model_path)
             from transformers.models.t5.modeling_t5 import T5Config
             from transformers.generation.configuration_utils import GenerationConfig
             from mot_code.mot_example_t5 import MoTT5ForConditionalGeneration
             mconfig = T5Config.from_pretrained(f'{model_path}/config.json')
-            # import json
-            # with open('deps/mot-t5-base/generation_config.json', 'r') as file:
-            #     gconfig = GenerationConfig(json.load(file))
-            language_model = MoTT5ForConditionalGeneration(mconfig, motion_codebook_size=all_motion_token_num,
-                                                           mot_factor=mot_factor, attention_mode=attention_mode
-                                                           )
+            language_model = MoTT5ForConditionalGeneration(mconfig, motion_codebook_size=all_motion_token_num)
             # state_dict = torch.load(f'{model_path}/model_state_dict.pth')
             # # state_dict = torch.load('deps/mot-t5-base/mot_model_state_dict.pth')
            
@@ -162,13 +156,11 @@ class MLM(nn.Module):
         else:
             raise ValueError("type must be either seq2seq or conditional")
 
-
         # Instantiate tokenizer
         self.tokenizer = AutoTokenizer.from_pretrained(model_path, legacy=True)
-        if self.lm_type == 'dec':
-            self.tokenizer.pad_token = self.tokenizer.eos_token
-            self.tokenizer.pad_token_id = self.tokenizer.eos_token_id
-        # # Add motion tokens
+        len_raw_tokenizer = len(self.tokenizer)
+        
+        # Add motion tokens
         self.tokenizer.add_special_tokens({'additional_special_tokens': new_special_tokens_text})
         self.text_vocab_size = len(self.tokenizer)
         
@@ -177,6 +169,10 @@ class MLM(nn.Module):
         self.som_id, self.eom_id =  self.tokenizer.convert_tokens_to_ids([self.som_word, self.eom_word])
         # self.mom_id, self.pom_id =  self.tokenizer.convert_tokens_to_ids([self.mom_word, self.pom_word])
         self.motion_holder_id_out, self.motion_holder_id = self.tokenizer.convert_tokens_to_ids([self.motion_holder_output_word, self.motion_holder_word])
+        
+        if self.lm_type == 'dec':
+            self.tokenizer.pad_token = self.tokenizer.eos_token
+            self.tokenizer.pad_token_id = self.tokenizer.eos_token_id
 
         # load state_dict from pth
         state_dict = torch.load(f'{model_path}/model_state_dict.pth')
@@ -193,7 +189,10 @@ class MLM(nn.Module):
         self.language_model = language_model
         self.language_model.train()
         
-        # self.language_model.config.mot_lm_dim = self.language_model.config.motion_vocab_size
+        text_embeddings_num = self.text_vocab_size
+        self.language_model.resize_token_embeddings(text_embeddings_num)
+        
+        self.language_model.config.mot_lm_dim = self.language_model.config.motion_vocab_size
         # print('mot_lm_dim', self.language_model.config.mot_lm_dim)
         self.language_model.config.text_vocab_size = self.text_vocab_size
         self.language_model.set_modality_info(self.tokenizer)
@@ -204,29 +203,38 @@ class MLM(nn.Module):
         # self.language_model.init_mod_token_embeddings(mod_id=1)
         
         mot_trained = True
-        if 'finetune' in stage:
-            text_trained = True
-        else:
-            text_trained = False
+        text_trained = 'finetune' in stage
         for n, p in self.language_model.named_parameters():
             if n in state_dict.keys() or 'fn.0' in n:
                 p.requires_grad = text_trained
             else:
                 p.requires_grad = mot_trained
-        self.language_model.resize_token_embeddings(self.text_vocab_size+2)
+                
+        if not text_trained and text_embeddings_num > len_raw_tokenizer:
+            self.language_model.pre_processors[0].weight.requires_grad = True
+            self.language_model.post_processors[0].weight.requires_grad = True
+            allow_ids = list(range(len_raw_tokenizer, text_embeddings_num))
+            self.language_model.pre_processors[0].weight.register_hook(
+                lambda grad: mask_grad(grad, allow_ids)
+            )
+            self.language_model.post_processors[0].weight.register_hook(
+                lambda grad: mask_grad(grad, allow_ids)
+            )
+        elif text_trained:
+            self.language_model.pre_processors[0].weight.requires_grad = True
+            self.language_model.post_processors[0].weight.requires_grad = True
 
         # adaptor from vae latent to llm latent
+        # self.llm_decoder_embed_dim = self.language_model.config.d_model  # 768
         self.llm_decoder_embed_dim = self.language_model.mot_embed_dim  # 768
         self.motion_und_head = MotionUndHead(vae_latent_channels, self.llm_decoder_embed_dim*self.holder_num_in_input, projector_type='linear')
         # if not self.multi_hidden and:
         #     self.motion_gen_head = MotionUndHead(self.llm_decoder_embed_dim*self.motion_holder_repeat, self.llm_decoder_embed_dim, projector_type='linear')
-        
-        diffhead['params']['target_channels'] = vae_latent_channels
-        diffhead['params']['target_size'] = vae_latent_size
-        diffhead['params']['z_channels'] = self.llm_decoder_embed_dim
-        self.diffloss = instantiate_from_config(diffhead)
 
-        self.multi_hidden = self.diffloss.multi_hidden
+        self.multi_hidden = diffhead['params']['multi_hidden']
+        self.with_hid_norm = self.multi_hidden and with_hid_norm
+        self.with_vae_latent_norm = with_vae_latent_norm
+        
         if self.multi_hidden:
             self.hidden_dim = self.llm_decoder_embed_dim
             if self.with_hid_norm:
@@ -237,39 +245,48 @@ class MLM(nn.Module):
         else:
             self.hidden_dim = self.llm_decoder_embed_dim*self.motion_holder_repeat
 
+        diffhead['params']['target_channels'] = vae_latent_channels
+        diffhead['params']['target_size'] = vae_latent_size
+        diffhead['params']['z_channels'] = self.hidden_dim
+        self.diffloss = instantiate_from_config(diffhead)
+
         self.diffusion_batch_mul = diffusion_batch_mul
         self.guidance_scale = guidance_scale
         self.guidance_uncondp = guidance_uncondp
         self.predict_epsilon = predict_epsilon
         self.do_classifier_free_guidance = self.guidance_scale > 1.0
+        print('guidance_scale', self.guidance_scale)
         if self.do_classifier_free_guidance:
             if fake_latent_mode == 'learnable_zero':
                 self.fake_latent = nn.Parameter(torch.zeros(self.motion_holder_repeat, self.llm_decoder_embed_dim))#.requires_grad_(False)
-            if fake_latent_mode == 'learnable_rand':
+            elif fake_latent_mode == 'learnable_rand':
                 self.fake_latent = nn.Parameter(torch.zeros(self.motion_holder_repeat, self.llm_decoder_embed_dim))#.requires_grad_(False)
                 torch.nn.init.normal_(self.fake_latent, std=.02)
             elif fake_latent_mode == 'all_zero':
                 self.fake_latent = torch.zeros(self.motion_holder_repeat, self.llm_decoder_embed_dim)
+            else:
+                assert False, f'not Implemented fake_latent_mode {fake_latent_mode}, should in \[learnable_zero, all_zero, learnable_rand]'
+        # torch.nn.init.normal_(self.fake_latent, std=.02)
 
-        # # Lora
-        # if lora:
-        #     from peft import LoraConfig, TaskType, get_peft_model, get_peft_model_state_dict
-        #     from peft.utils.other import fsdp_auto_wrap_policy
-        #     peft_config = LoraConfig(
-        #         bias="none",
-        #         task_type="CAUSAL_LM",
-        #         #  inference_mode=False,
-        #         r=8,
-        #         lora_alpha=16,
-        #         lora_dropout=0.05)
-        #     self.language_model = get_peft_model(self.language_model,
-        #                                          peft_config)
+        # Lora
+        if lora:
+            from peft import LoraConfig, TaskType, get_peft_model, get_peft_model_state_dict
+            from peft.utils.other import fsdp_auto_wrap_policy
+            peft_config = LoraConfig(
+                bias="none",
+                task_type="CAUSAL_LM",
+                #  inference_mode=False,
+                r=8,
+                lora_alpha=16,
+                lora_dropout=0.05)
+            self.language_model = get_peft_model(self.language_model, peft_config)
 
     def forward(self, texts: List[str], motion_feats: Tensor, motion_encode_net,
                 lengths: List[int], tasks: dict,
                 # output_hidden_states=False
                 ):
         if self.lm_type == 'encdec':
+            assert False
             return self.forward_encdec(texts, motion_feats, motion_encode_net, lengths, tasks, 
                                     #    output_hidden_states=output_hidden_states, 
                                        )
@@ -320,7 +337,7 @@ class MLM(nn.Module):
         if self.with_vae_latent_norm:
             sampled_token_latents = sampled_token_latents/vae_mean_std_inv
         return sampled_token_latents, motion_mask
-
+    
     def forward_encdec(
         self,
         texts: List[str],
@@ -414,10 +431,12 @@ class MLM(nn.Module):
         with torch.no_grad():
             motion_tokens = self.motion_feats_to_tokens(motion_encode_net, motion_feats, lengths, modes=modes)
 
+        # if self.interleaved_input:
         inputs_embeds = self.language_model.get_embeddings_from_ids(source_input_ids, type_ids)
         # decoder_inputs_embeds = self.language_model.get_embeddings_from_ids(decoder_input_ids)
 
         # motion_tokens: List [bs*[k,1,256]]
+        # dec_input_is_motion = decoder_input_ids==self.motion_holder_id_out
         motion_num_in_input = input_is_motion.sum(dim=-1)//self.holder_num_in_input
         motion_num_in_label = output_is_motion.sum(dim=-1)//self.motion_holder_repeat
 
@@ -440,7 +459,6 @@ class MLM(nn.Module):
                 if condition == 'supervised' else None,
             labels=labels_input_ids,
             decoder_input_ids=decoder_input_ids,
-            # decoder_inputs_embeds=decoder_inputs_embeds,
             decoder_attention_mask=lables_attention_mask
                 if condition == 'supervised' else None,
             output_hidden_states=True, 
@@ -453,7 +471,6 @@ class MLM(nn.Module):
             hidden_to_diff = [hidden[i:i+1,m, :] for i,m in enumerate(output_is_motion) if m.sum()>0]
             hidden_to_diff = torch.cat(hidden_to_diff, dim=0)  # bs, motion_holder_repeat, 768
             if self.with_hid_norm:
-            # if self.multi_hidden and self.diff_with_norm:
                 hidden_to_diff = self.norm_layer(hidden_to_diff)
                 hidden_to_diff = hidden_to_diff + self.diffusion_pos_embed_learned
             # print(hidden_to_diff.shape, ll.shape)
@@ -472,7 +489,7 @@ class MLM(nn.Module):
         motion_encode_net, 
         lengths: List[int],
         tasks: dict,
-        # output_hidden_states=True,
+        output_hidden_states=True,
     ):
         # assert False
         self.tokenizer.padding_side = "right"
@@ -486,14 +503,18 @@ class MLM(nn.Module):
             if condition == 'text':
                 modes = 'text'
                 labels = texts
+                inp_labels = None
             elif condition == 'motion':
                 modes = 'motion'
-                labels = self.input_motion_holder_seq+' \n '+self.output_motion_holder_seq
+                labels = [self.input_motion_holder_seq + ' \n ' + self.output_motion_holder_seq]*len(lengths)
+                inp_labels = [self.input_motion_holder_seq + ' \n']*len(lengths)
             else:
                 inputs, outputs, modes = self.template_fulfill(tasks, lengths, texts)
                 # inputs, outputs = self.template_fulfill(tasks, lengths, motion_strings, texts)
                 labels = []
+                inp_labels = []
                 for i in range(len(inputs)):
+                    inp_labels.append(inputs[i] + ' \n')
                     labels.append(inputs[i] + ' \n ' + outputs[i] +
                                 self.tokenizer.eos_token)
 
@@ -515,6 +536,7 @@ class MLM(nn.Module):
         input_type_ind = labels_input_ids>=self.text_vocab_size
         type_ids[input_type_ind] = 1
         eom_ignore = labels_input_ids==self.eom_id
+        holder_ignore = input_is_motion|output_is_motion
         labels_input_ids[input_type_ind] -= self.text_vocab_size
 
         inputs_embeds = self.language_model.get_embeddings_from_ids(labels_input_ids, type_ids)
@@ -523,9 +545,11 @@ class MLM(nn.Module):
 
         labels = labels_input_ids.clone().detach()
         labels[eom_ignore] = -100
-        # labels[output_is_motion|input_is_motion] = -100
+        labels[holder_ignore] = -100
+        # labels[input_is_motion|output_is_motion] = self.mot_pad_id
         
         batch_size, expandend_input_length = labels_input_ids.shape
+        del inputs, labels_input_ids
         with torch.no_grad():
             motion_tokens = self.motion_feats_to_tokens(motion_encode_net, motion_feats, lengths, modes=modes)
         
@@ -539,6 +563,11 @@ class MLM(nn.Module):
         ll = [m[-num:] for m, num in zip(motion_tokens, motion_num_in_label) if num>0]
         del motion_tokens, motion_feats
 
+        # if 'finetune' in self.stage and inp_labels is not None:
+        #     inp_lengths = torch.tensor([len(ids) for ids in self.tokenizer(inp_labels).input_ids]).unsqueeze(1)
+        #     input_mask = torch.arange(labels.size(1)).unsqueeze(0) < inp_lengths
+        #     labels[input_mask] = -100
+        #     # print(((labels!=-100)&(lables_attention_mask==1)).sum(-1))
         outputs = self.language_model(
             type_ids=type_ids,
             inputs_embeds=inputs_embeds,
@@ -557,7 +586,7 @@ class MLM(nn.Module):
                 hidden_to_diff = self.norm_layer(hidden_to_diff)
                 hidden_to_diff = hidden_to_diff + self.diffusion_pos_embed_learned
             outputs.diff_loss = self.forward_diff_loss(z=hidden_to_diff.view(len(ll),-1,self.hidden_dim), target=ll)
-            del hidden_to_diff, ll
+            del hidden, hidden_to_diff, ll
         except:
             outputs.diff_loss = torch.tensor(0.)
 
@@ -581,7 +610,7 @@ class MLM(nn.Module):
 
         # Tokenize
         if self.lm_type == 'dec':
-            texts = [text + " \n " for text in texts]
+            texts = [text + " \n" for text in texts]
             self.tokenizer.padding_side = "left"
 
 
@@ -610,13 +639,12 @@ class MLM(nn.Module):
                 motion_embeddings = self.motion_und_head(motion_tokens[i])
                 motion_embs = motion_embeddings[:motion_num_in_input[i]].split(self.llm_decoder_embed_dim,dim=-1)
                 inputs_embeds[self.mod_id][i, input_is_motion[i], :] = torch.cat(motion_embs, dim=0)
-                # inputs_embeds[self.mod_id][i, input_is_motion[i], :] = motion_embeddings[:motion_num_in_input[i]]
         else:
             assert (~input_is_motion).all(), 'motion holder in input text, wihout provided motion tokens'
             
 
         mid = self.mod2id[gen_mode]
-        som_id = self.language_model.modality_infos[mid].som_id
+        som_id = self.language_model.modality_infos[mid].som_id + self.language_model.modality_infos[mid].token_id_start
         eom_id = self.language_model.modality_infos[mid].eom_id + self.language_model.modality_infos[mid].token_id_start
         # decoder_input_ids = torch.full((source_input_ids.shape[0], 1), som_id).to(source_input_ids)
         # decoder_type_ids = torch.full((source_input_ids.shape[0], 1), mid).to(source_input_ids)
@@ -639,14 +667,6 @@ class MLM(nn.Module):
                     mode=gen_mode,
                 )
             elif self.lm_type == 'dec':
-                # # assert False
-                # if gen_mode=='motion':
-                #     source_input_ids = torch.cat([source_input_ids, decoder_input_ids], -1)
-                #     attn = source_encoding.attention_mask
-                #     source_encoding.attention_mask = torch.cat([attn, torch.ones_like(attn[:,-1:])], -1)
-                #     type_ids = torch.cat(
-                #         [type_ids, torch.full(type_ids[:,-1:].shape, mid, dtype=torch.long, device=self.device)], -1)
-
                 outputs = self.language_model.generate(
                     type_ids=type_ids,
                     # input_ids=source_input_ids,
@@ -661,15 +681,25 @@ class MLM(nn.Module):
                     mode=gen_mode,
                     repetition_penalty=1.1,
                 )
-                # self.tokenizer.padding_side = 'left'
 
         output_ids = outputs.sequences
         outputs1 = torch.cat([output_ids, torch.full((*output_ids.shape[:-1],1), eom_id, device=self.device, dtype=output_ids.dtype)], dim=-1)
         outputs_string = self.tokenizer.batch_decode(outputs1, skip_special_tokens=False)
 
         motion_string, cleaned_text = self.clean_text_string(outputs_string)
-        # outputs_tokens, cleaned_text = self.motion_string_to_token(
-        #     outputs_string)
+
+        # hidden = torch.cat(outputs.hidden_states[self.mod_id], dim=1)
+        # output_is_motion = output_ids == self.motion_holder_id_out
+        # motion_latents = torch.stack([h[output_is_motion[i], :] 
+        #                        if output_is_motion[i].sum()>0 else self.fake_latent
+        #                        for i,h in enumerate(hidden) 
+        #                        ]) # bs, motion_holder_repeat, lat_dim(768)
+
+        # # # latents.mean(),  latents.std()
+        # # # (tensor(0.2327, device='cuda:0'), tensor(6.2979, device='cuda:0')
+        # if self.multi_hidden and self.diff_with_norm:
+        #     motion_latents = self.norm_layer(motion_latents)
+        #     motion_latents = motion_latents + self.diffusion_pos_embed_learned
         motion_latents = []
 
         return motion_latents, cleaned_text
@@ -678,9 +708,6 @@ class MLM(nn.Module):
                         texts: List[str],
                         motion_tokens=None,  # motion_tokens: List [bs*[k,1,256]]
                         # fixed_motion_length: int = 8,
-                        # num_beams: int = 1,
-                        # do_sample: bool = True,
-                        # bad_words_ids: List[int] = None,
                         ):
         
         # Device
@@ -761,8 +788,7 @@ class MLM(nn.Module):
             latents = torch.stack([h[output_is_motion[i], :] for i,h in enumerate(hidden)]) # bs, motion_holder_repeat, lat_dim(768)
         elif self.lm_type == 'dec':
             labels = source_input_ids.clone().detach()
-            # labels[output_is_motion] = self.mot_pad_id
-            # labels[input_is_motion] = self.mot_pad_id
+            # labels[output_is_motion|input_is_motion] = self.mot_pad_id
             outputs = self.language_model(
                 type_ids=type_ids,
                 # input_ids=source_input_ids,
@@ -771,7 +797,6 @@ class MLM(nn.Module):
                 # labels=labels,
                 output_hidden_states=True, 
                 )
-
             hidden = outputs.hidden_states[-1][self.mod_id]  # [bs, labels_seq_len, emb_dim(768)] 
             latents = torch.stack([h[output_is_motion[i], :] for i,h in enumerate(hidden)]) # bs, motion_holder_repeat, lat_dim(768)
 
@@ -829,7 +854,6 @@ class MLM(nn.Module):
                 }] * len(lengths)
 
                 with torch.no_grad():
-                    # motion_tokens = self.motion_feats_to_tokens(motion_encode_net, motion_feats, lengths, modes='motion')
                     motion_tokens = self.motion_feats_to_tokens(motion_encode_net, motion_feats, lengths, modes='pred')
 
             elif task == "inbetween":
@@ -845,16 +869,17 @@ class MLM(nn.Module):
                 }] * len(lengths)
                 
                 with torch.no_grad():
-                    # motion_tokens = self.motion_feats_to_tokens(motion_encode_net, motion_feats, lengths, modes='motion')
+                    # motion_tokens_input, _ = self.motion_feats_to_tokens(motion_encode_net, motion_feats, lengths, modes='motion')
                     motion_tokens = self.motion_feats_to_tokens(motion_encode_net, motion_feats, lengths, modes='inbetween')
+
 
             inputs, outputs, modes = self.template_fulfill(tasks, lengths, texts, stage)
 
             outputs_tokens = self.generate_direct_motion(
-                inputs,
+                # inputs,
+                [inn + " \n" for inn in inputs],
                 motion_tokens=motion_tokens,
-                # num_beams=1,
-                # do_sample=True,
+                # fixed_motion_length=1,
             )
 
             return outputs_tokens
@@ -892,12 +917,16 @@ class MLM(nn.Module):
             inputs, outputs, modes = self.template_fulfill(tasks, lengths, texts)
             
             outputs_tokens, cleaned_text = self.generate_direct(
-                inputs,
+                # inputs,
+                [inn + " \n" for inn in inputs],
                 motion_tokens=motion_tokens,
                 max_length=40,
                 num_beams=1,
                 do_sample=False,
+                bad_words_ids = [[self.som_id], [self.eom_id]],
                 gen_mode='text',
+                # output_hidden_states=output_hidden_states,
+                # bad_words_ids=self.bad_words_ids
             )
             return cleaned_text
 
@@ -945,21 +974,24 @@ class MLM(nn.Module):
             z, _ = motion_encode_net.encode_dist2z(dist)
 
             if self.with_vae_latent_norm:
-                motion_tokens.append(z.permute(1,0,2).mul_(motion_encode_net.mean_std_inv))
+                zz = z.permute(1,0,2).mul_(motion_encode_net.mean_std_inv_2)
             else:
-                motion_tokens.append(z.permute(1,0,2))
-            # motion_dist.append(dist)
+                zz = z.permute(1,0,2)
+            # motion_tokens_input.append(zz)
+            motion_tokens.append(zz)
 
+        return motion_tokens
         # return motion_tokens_input, motion_tokens # List[List[tensor]([bs, 1, 256])]
-        return motion_tokens # List[List[tensor]([bs, 1, 256])]
     
     def clean_text_string(self, motion_string: List[str]):
         output_string = []
         for i in range(len(motion_string)):
+            # string = self.get_middle_str(motion_string[i], '<start_of_motion>', '<end_of_motion>')
             output_string.append(motion_string[i].replace(
                 self.output_motion_holder_seq, '<Motion_Placeholder>').replace(
                 self.input_motion_holder_seq, '<Motion_Placeholder>').replace(
-                    self.tokenizer.pad_token, ''))
+                    self.tokenizer.pad_token, '').replace(
+                    '\n', ' '))
     #         try:
     #             last = out.index('\n')
     #             out = out[:last]
@@ -983,13 +1015,13 @@ class MLM(nn.Module):
 
         return None, output_string
     
-    def placeholder_fulfill(self, prompt: str, length: int, motion_string: str,
-                            text: str):
+    def placeholder_fulfill(self, prompt: str, length: int, motion_string: str, text: str):
 
         seconds = math.floor(length / self.framerate)
         motion_masked = motion_string + self.masked_holder_seq + motion_string
         
         if random.random() < self.quota_ratio and ('\"' not in text):
+        # if random.random() < self.quota_ratio:
             text = f'\"{text}\"'
 
         prompt = prompt.replace('<Caption_Placeholder>', text).replace(
@@ -1034,8 +1066,9 @@ class MLM(nn.Module):
     #             startIndex += len(startStr)
     #         endIndex = content.index(endStr)
     #     except:
-    #         return '<start_of_motion><pad_motion><end_of_motion>'
+    #         return '<start_of_motion><motion_id_0><end_of_motion>'
     #         # return f'<motion_id_{self.m_codebook_size}><motion_id_0><motion_id_{self.m_codebook_size+1}>'
+
     #     return startStr + content[startIndex:endIndex] + endStr
 
     def random_spans_noise_mask(self, length):

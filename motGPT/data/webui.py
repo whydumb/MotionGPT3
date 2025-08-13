@@ -3,6 +3,7 @@ import torch
 from os.path import join as pjoin
 from .humanml.scripts.motion_process import (process_file, recover_from_ric)
 from . import BASEDataModule
+# from .humanml import Text2MotionDatasetEval, Text2MotionDataset, Text2MotionDatasetCB, MotionDataset, MotionDatasetVQ, Text2MotionDatasetToken, Text2MotionDatasetM2T
 from .humanml import Text2MotionDatasetEvalV3, Text2MotionDataset, Text2MotionDatasetCBV3, MotionDataset, MotionDatasetVQ, Text2MotionDatasetToken
 from .utils import humanml3d_collate
 
@@ -53,7 +54,7 @@ class HumanML3DDataModule(BASEDataModule):
                 self.hparams.win_size = 64
                 self.Dataset = MotionDatasetVQ
             else:
-                self.Dataset = Text2MotionDataset
+                self.Dataset = MotionDataset
         elif 'lm' in cfg.TRAIN.STAGE:
             self.hparams.code_path = cfg.DATASET.CODE_PATH
             self.hparams.task_path = cfg.DATASET.TASK_PATH

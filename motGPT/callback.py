@@ -55,10 +55,10 @@ def getCheckpointCallback(cfg, logger=None, **kwargs):
     }
     callbacks.append(ModelCheckpoint(**checkpointParams))
 
-    # Save checkpoint every 50 epochs
+    # Save checkpoint every n*5 epochs
     checkpointParams.update({
         'every_n_epochs':
-        50,
+        cfg.LOGGER.VAL_EVERY_STEPS*5,
         'save_top_k':
         -1,
         'save_last':

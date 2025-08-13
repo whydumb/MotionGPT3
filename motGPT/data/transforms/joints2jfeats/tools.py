@@ -17,7 +17,7 @@
 import torch
 import torch.nn.functional as F
 
-from mGPT.utils.joints import mmm_joints
+from motGPT.utils.joints import mmm_joints
 
 # Get the indexes of particular body part SMPLH case
 # Feet

@@ -222,7 +222,7 @@ class BaseModel(LightningModule):
                         # else:
                         #     name = f"{fname}.npy"
                         # if bid == 0:
-                        #     from mGPTv2.utils.render_utils import render_motion
+                        #     from motGPT.utils.render_utils import render_motion
                         #     render_motion(gen_joints, gen_joints, output_dir=output_dir, fname=f'{fname}')
                         #     render_motion(gt_joints, gt_joints, output_dir=output_dir, fname=f'{fname}_gt')
                         # # save predictions results

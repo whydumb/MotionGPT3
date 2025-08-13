@@ -7,7 +7,7 @@ from .renderer import get_renderer
 
 
 def get_rotation(theta=np.pi / 3):
-    import mGPT.utils.rotation_conversions as geometry
+    import motGPT.utils.rotation_conversions as geometry
     import torch
     axis = torch.tensor([0, 1, 0], dtype=torch.float)
     axisangle = theta * axis
@@ -58,14 +58,7 @@ def render_video(meshes,
         # show(img)
 
     imgs = np.array(imgs)
-    # masks = ~(imgs/255. > 0.96).all(-1)
-    # coords = np.argwhere(masks.sum(axis=0))
-    # y1, x1 = coords.min(axis=0)
-    # y2, x2 = coords.max(axis=0)
-    # writer = imageio.get_writer(savepath, fps=30)
-    # for cimg in imgs[:, y1:y2, x1:x2]:
-    #     writer.append_data(cimg)
-    # writer.close()
+
     writer = imageio.get_writer(savepath, fps=30)
     for cimg in imgs:
         writer.append_data(cimg)

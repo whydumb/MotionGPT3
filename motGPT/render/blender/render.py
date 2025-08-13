@@ -11,7 +11,7 @@ from .sampler import get_frameidx
 from .scene import setup_scene  # noqa
 from .tools import delete_objs, load_numpy_vertices_into_blender, style_detect
 from .vertices import prepare_vertices
-from mGPT.utils.joints import smplh_to_mmm_scaling_factor
+from motGPT.utils.joints import smplh_to_mmm_scaling_factor
 
 
 def prune_begin_end(data, perc):
@@ -52,7 +52,7 @@ def render(npydata,
                     accelerator=accelerator,
                     device=device)
 
-    print('aaaaaaaaaa')
+    # print('aaaaaaaaaa')
     is_mesh, is_smplx, jointstype = style_detect(npydata)
     # print(is_mesh, is_smplx, jointstype)
     

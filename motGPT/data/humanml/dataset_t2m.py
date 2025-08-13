@@ -75,8 +75,8 @@ class Text2MotionDataset(data.Dataset):
         print('in dataset loading', len(self.id_list))
         print('min/ max motion length', self.min_motion_length, self.max_motion_length)
         # Fast loading
-        if False:
-        # if os.path.exists(pjoin(data_root, f'tmp/{split}{subset}_data.pkl')):
+        # if False:
+        if os.path.exists(pjoin(data_root, f'tmp/{split}{subset}_data.pkl')):
             if tiny or debug:
                 with open(pjoin(data_root, f'tmp/{split}{subset}_data.pkl'),
                           'rb') as file:
@@ -99,6 +99,10 @@ class Text2MotionDataset(data.Dataset):
                     break
                 try:
                     motion = np.load(pjoin(motion_dir, name + ".npy"))
+                    # if (len(motion)) < self.min_motion_length or (len(motion)
+                    #                                                 >= self.max_motion_length):
+                    #     continue
+
                     # Read text
                     text_data = []
                     flag = False
@@ -136,7 +140,7 @@ class Text2MotionDataset(data.Dataset):
                                 length_list.append(len(motion_new))
 
                     if flag and (not (len(motion)) < self.min_motion_length or (
-                        len(motion) >= self.max_motion_length)):
+                            len(motion) >= self.max_motion_length)):
                         data_dict[name] = {
                             'motion': motion,
                             "length": len(motion),

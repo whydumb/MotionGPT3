@@ -1,5 +1,5 @@
 import numpy as np
-from mGPT.utils.joints import mmm_joints, smplh2mmm_indexes
+from motGPT.utils.joints import mmm_joints, smplh2mmm_indexes
 
 # Map joints Name to SMPL joints idx
 JOINT_MAP = {

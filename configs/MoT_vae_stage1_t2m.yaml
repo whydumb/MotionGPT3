@@ -12,8 +12,8 @@ lm_ablation:
   with_vae_latent_norm: True
   # diffloss
   multi_hidden: True
-  guidance_scale: 1.0
-  model_guidance_scale: 1.0
+  guidance_scale: 3.0
+  model_guidance_scale: 3.0
   diffusion_batch_mul: 4
   guidance_uncondp: 0.1
   predict_epsilon: True
@@ -90,7 +90,7 @@ LOSS:
     RECONS_LOSS: 'l1_smooth'
 
 model:
-  target: motGPT.models.motgpt.MotGPT
+  target: motGPT.models.motgpt_2optimizer.MotGPT
   params:
     condition: 'text'
     task: 't2m'

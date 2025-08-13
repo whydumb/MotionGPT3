@@ -522,7 +522,7 @@ class MotionGPT(BaseModel):
                         joint_ref = self.feats2joints(self.datamodule.renorm4m(feat_ref))
                         render_motion(joint_ref, None, output_dir=output_dir, fname=f'{keyid}_gt',
                                         method='fast', fps=self.datamodule.fps)
-                        np.savetxt(os.path.join(output_dir, f'{keyid}_gt.txt'), [batch['text'][idx]], fmt='%s')
+                        np.savetxt(os.path.join(output_dir, f'{keyid}_gt.txt'), [batch['text'][idx]], fmt='%s', encoding='utf-8')
                         np.savetxt(os.path.join(output_dir, f'{keyid}.txt'), [gen_texts[idx]], fmt='%s', encoding='utf-8')
                         
                 self.hparams.metrics_dict = metrics_dicts = ['M2TMetrics']

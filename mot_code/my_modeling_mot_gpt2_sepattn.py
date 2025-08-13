@@ -134,6 +134,7 @@ class MoTGPT2Block(nn.Module):
         self.modality_channels = modality_channels
         # self.shared_attn = shared_attn
         self.shared_attn = layer_idx in config.cross_model_attention
+        self.text_shared_attn = layer_idx in config.text_cross_model_attention
         print(layer_idx, self.shared_attn)
         
         # TODO: support GQA in the future
@@ -486,6 +487,22 @@ class MoTGPT2Block(nn.Module):
             #     head_mask=head_mask,
             #     output_attentions=output_attentions,
             )
+            # if not self.text_shared_attn:
+            #     lpast = None
+            #     mod_id = 0  # self.text_id
+            #     if layer_past is not None:
+            #         lpast = layer_past[mod_id]
+            #     attn_, pask_kv = self.forward_attn_alone(
+            #         layernorm_output[mod_id],
+            #         mod_id=mod_id,
+            #         layer_past = lpast, 
+            #         use_cache=use_cache,
+            #         attention_mask=attention_mask,
+            #     #     head_mask=head_mask,
+            #     #     output_attentions=output_attentions,
+            #     )
+            #     attn_output[0] = attn_
+            #     pask_key_values[0] = pask_kv
         else:
             attn_output = []
             pask_key_values = []
@@ -504,6 +521,7 @@ class MoTGPT2Block(nn.Module):
                 )
                 attn_output.append(attn_)
                 pask_key_values.append(pask_kv)
+            
         hidden_states = apply_residual(attn_output, residual)
 
         residual = hidden_states

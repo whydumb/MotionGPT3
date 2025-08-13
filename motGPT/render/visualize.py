@@ -11,7 +11,6 @@ from scipy.spatial.transform import Rotation as R
 from motGPT.render.renderer import get_renderer
 from motGPT.render.rendermotion import render_video
 
-
 def parsename(path):
     basebane = os.path.basename(path)
     base = os.path.splitext(basebane)[0]

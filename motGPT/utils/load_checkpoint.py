@@ -1,18 +1,19 @@
 import torch
+import sys
+
 
 def load_pretrained(cfg, model, logger=None, phase="train"):
     if phase == "train":
         ckpt_path = cfg.TRAIN.PRETRAINED
     elif phase == "test":
         ckpt_path = cfg.TEST.CHECKPOINTS
-        
     if logger is not None:
         logger.info(f"Loading pretrain model from {ckpt_path}")
         
     ckpt = torch.load(ckpt_path, map_location="cpu", weights_only=False)
     state_dict = ckpt["state_dict"]
     model.load_state_dict(state_dict, strict=True)
-    model.epoch = ckpt['epoch']
+    model.epoch = ckpt.get('epoch', -1)
     return model
 
 
