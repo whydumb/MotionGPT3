@@ -74,7 +74,7 @@ TEST:
   REPLICATION_TIMES: 2 # Number of times to replicate the test
 
 DATASET:
-  target: mGPTv3.data.HumanML3D.HumanML3DDataModule
+  target: motGPT.data.HumanML3D.HumanML3DDataModule
   CODE_PATH: TOKENS
 
 METRIC:

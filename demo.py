@@ -8,12 +8,13 @@ import torch
 # from rich import get_console
 # from rich.table import Table
 from omegaconf import OmegaConf
+# import moviepy.editor as mp
 from tqdm import tqdm
 from motGPT.config import parse_args
 from motGPT.data.build_data import build_data
 from motGPT.models.build_model import build_model
 from motGPT.utils.logger import create_logger
-# import motGPT.render.matplot.plot_3d_global as plot_3d
+import motGPT.render.matplot.plot_3d_global as plot_3d
 
 def motion_token_to_string(motion_token, lengths, codebook_size=512):
     motion_string = []
@@ -169,6 +170,7 @@ def main():
             motion_feats = collate_tensors(return_dict['motion'][b*batch_size:(b+1)*batch_size]).to(device)
             batch["motion"] = motion_feats,
         
+        print(task)
         if task in ['t2m', 't2t']:
             batch['motion_tokens_input'] = None
         else:
@@ -214,8 +216,13 @@ def main():
 
                 with open(os.path.join(output_dir, f'{idx}_in.txt'), 'w') as f:
                     f.write(text_batch[i])
+                    
                 with open(os.path.join(output_dir, f'{idx}_out.txt'), 'w', encoding='utf-8') as f:
                     f.write(output_texts[i])
+                    
+                
+                pose_vis = plot_3d.draw_to_batch(xyz, [text_batch[i]], [os.path.join(output_dir, f'{idx}_out.gif')])
+                del pose_vis
 
     total_time = time.time() - total_time
     logger.info(
