@@ -127,7 +127,7 @@ We support txt file input, the output motions are npy files and output texts are
 Then, run the following script:
 
 ```
-python demo.py --cfg ./configs/MoT_vae_stage3.yaml --example ./demos/t2m.txt
+python demo.py --cfg ./configs/test.yaml --example ./assets/texts/t2m.txt
 ```
 
 Some parameters:
