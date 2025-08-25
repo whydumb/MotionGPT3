@@ -85,6 +85,11 @@ For pre-trained MotionVAE:
 bash prepare/download_mld_pretrained_models.sh
 ```
 
+Then run following script to process checkpoints:
+```
+python -m scripts.gen_mot_gpt
+```
+
 <!-- ### 3. Pre-trained model
 
 Run the script to download the pre-trained model
@@ -161,7 +166,7 @@ Please first check the parameters in `configs/MoT_vae_stage1_t2m.yaml`, e.g. `NA
 Then, run the following command:
 
 ```
-python gen_mot_gpt.py
+python -m scripts.gen_mot_gpt
 python -m train --cfg configs/MoT_vae_stage1_t2m.yaml --nodebug
 ```
 
