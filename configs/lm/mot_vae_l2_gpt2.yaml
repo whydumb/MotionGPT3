@@ -1,7 +1,7 @@
 target: motGPT.archs.motgpt_l2lm.MLM
 params:
   model_type: gpt2
-  model_path: deps/gpt2
+  model_path: deps/mot-gpt2
   stage: ${TRAIN.STAGE}
   motion_codebook_size: ${model.params.codebook_size}
   mot_factor:  ${lm_ablation.mot_factor}
