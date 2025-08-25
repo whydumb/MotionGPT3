@@ -176,17 +176,16 @@ class MLM(nn.Module):
             self.tokenizer.pad_token_id = self.tokenizer.eos_token_id
 
         # load state_dict from pth
-        # state_dict = torch.load(f'{model_path}/model_state_dict.pth')
-        # state_dict = load_file(f'{model_path}/model.safetensors')
-        # new_state_dict = state_dict.copy()
-        # if 'encoder.embed_tokens.weight' in new_state_dict: # model_type == "t5"
-        #     new_state_dict.pop('encoder.embed_tokens.weight')
-        #     new_state_dict.pop('decoder.embed_tokens.weight')
+        state_dict = torch.load(f'{model_path}/model_state_dict.pth')
+        new_state_dict = state_dict.copy()
+        if 'encoder.embed_tokens.weight' in new_state_dict: # model_type == "t5"
+            new_state_dict.pop('encoder.embed_tokens.weight')
+            new_state_dict.pop('decoder.embed_tokens.weight')
 
-        # msg = language_model.load_state_dict(new_state_dict, strict=False)
-        # if len(msg.unexpected_keys)>0:
-        #     print('unexpected_keys keys:', msg.unexpected_keys)
-        #     exit()
+        msg = language_model.load_state_dict(new_state_dict, strict=False)
+        if len(msg.unexpected_keys)>0:
+            print('unexpected_keys keys:', msg.unexpected_keys)
+            exit()
         # print('missing keys:', msg.missing_keys)
         self.language_model = language_model
         self.language_model.train()
@@ -206,11 +205,11 @@ class MLM(nn.Module):
         
         mot_trained = True
         text_trained = 'finetune' in stage
-        # for n, p in self.language_model.named_parameters():
-        #     if n in state_dict.keys() or 'fn.0' in n:
-        #         p.requires_grad = text_trained
-        #     else:
-        #         p.requires_grad = mot_trained
+        for n, p in self.language_model.named_parameters():
+            if n in state_dict.keys() or 'fn.0' in n:
+                p.requires_grad = text_trained
+            else:
+                p.requires_grad = mot_trained
                 
         if not text_trained and text_embeddings_num > len_raw_tokenizer:
             self.language_model.pre_processors[0].weight.requires_grad = True
