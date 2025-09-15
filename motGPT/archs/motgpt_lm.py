@@ -743,7 +743,7 @@ class MLM(nn.Module):
         inputs_embeds = self.language_model.get_embeddings_from_ids(source_input_ids, type_ids)  # [bs,256,768]
             
         if motion_tokens is not None: # motion_num,1,256
-            motion_num_in_input = input_is_motion.sum(dim=0)//self.holder_num_in_input
+            motion_num_in_input = input_is_motion.sum(dim=-1)//self.holder_num_in_input
             for i, source_input_id in enumerate(source_input_ids):
                 motion_embeddings = self.motion_und_head(motion_tokens[i])
                 motion_embs = motion_embeddings[:motion_num_in_input[i]].split(self.llm_decoder_embed_dim,dim=-1)
