@@ -5,7 +5,7 @@ import torch
 import time
 from motGPT.config import instantiate_from_config
 from os.path import join as pjoin
-from motGPT.losses.mgpt import MotLosses
+from motGPT.losses.mgpt import GPTLosses
 from motGPT.models.base import BaseModel
 from .base import BaseModel
 import json
@@ -53,7 +53,7 @@ class MotionGPT(BaseModel):
 
         # Instantiate the losses
         self._losses = torch.nn.ModuleDict({
-            split: MotLosses(cfg, self.hparams.stage, self.datamodule.njoints)
+            split: GPTLosses(cfg, self.hparams.stage, self.datamodule.njoints)
             for split in ["losses_train", "losses_test", "losses_val"]
         })
 
