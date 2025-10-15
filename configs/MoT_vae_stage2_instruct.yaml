@@ -1,7 +1,7 @@
 NAME: MoT_vae_stage2_instruct # Experiment names
 ACCELERATOR: 'gpu' # Devices optioncal: “cpu”, “gpu”, “tpu”, “ipu”, “hpu”, “mps, “auto”
 NUM_NODES: 1 # Number of GPU nodes for distributed training
-DEVICE: [0] # Index of gpus eg. [0] or [0,1,2,3]
+DEVICE: [0,1] # Index of gpus eg. [0] or [0,1,2,3]
 
 lm_ablation:
   # lm
@@ -34,7 +34,7 @@ TRAIN:
   #---------------------------------
   NUM_WORKERS: 8 # Number of workers
   BATCH_SIZE: 32 # Size of batches
-  accumulate_grad_batches: 2
+  # accumulate_grad_batches: 2
   END_EPOCH: 300 # End epoch
   # RESUME: '' # Resume training from this path
   # PRETRAINED: '' # Preatrained model path
