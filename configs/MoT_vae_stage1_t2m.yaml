@@ -51,11 +51,11 @@ TRAIN:
   OPTIM:
     target: AdamW
     params:
-      lr: 2e-4
+      lr: 1e-4
       betas: [0.9, 0.99]
       weight_decay: 0.0
     params_diff:
-      lr: 1e-4
+      lr: 2e-4
       betas: [0.9, 0.99]
       weight_decay: 0.0
 
