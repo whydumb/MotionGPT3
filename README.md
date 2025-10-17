@@ -41,6 +41,7 @@ Extensive experiments show that our approach achieves competitive performance on
 
 ## 🚩 News
 
+- [2025/10/17] 🔥🔥 Release **MotionGPT3 models** on [huggingface](https://huggingface.co/Boif/MotionGPT3)
 - [2025/06/30] Upload and init project
 
 ## ⚡ Quick Start
