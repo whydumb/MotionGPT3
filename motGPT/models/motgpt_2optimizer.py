@@ -326,7 +326,7 @@ class MotGPT(BaseModel):
         sampled_token_latents, motion_mask = self.lm.sample_tokens(
             outputs, feats_ref.device, 
             temperature=1.0, cfg=self.guidance_scale, 
-            vae_mean_std_inv=self.vae.mean_std_inv_2) # , cfg_schedule="linear"
+            vae_mean_std_inv=self.vae.mean_std_inv) # , cfg_schedule="linear"
         sampled_token_latents = sampled_token_latents.reshape(len(lengths), self.vae.latent_size, -1).permute(1,0,2)  # [1,bs,256]
         
         feats_rst = self.vae.decode(sampled_token_latents, lengths)  #[bs,lengths,263]
@@ -398,7 +398,7 @@ class MotGPT(BaseModel):
         sampled_token_latents, motion_mask = self.lm.sample_tokens(
             outputs, feats_ref.device, 
             temperature=1.0, cfg=self.guidance_scale, 
-            vae_mean_std_inv=self.vae.mean_std_inv_2) # , cfg_schedule="linear"
+            vae_mean_std_inv=self.vae.mean_std_inv) # , cfg_schedule="linear"
         sampled_token_latents = sampled_token_latents.reshape(len(lengths), self.vae.latent_size, -1).permute(1,0,2)  # [1,bs,256]
         feats_rst = self.vae.decode(sampled_token_latents, lengths)  # [bs,lengths,263]
         feats_rst[motion_mask==1] = torch.zeros_like(feats_ref[0, ...])
