@@ -975,7 +975,7 @@ class MLM(nn.Module):
             z, _ = motion_encode_net.encode_dist2z(dist)
 
             if self.with_vae_latent_norm:
-                zz = z.permute(1,0,2).mul_(motion_encode_net.mean_std_inv_2)
+                zz = z.permute(1,0,2).mul_(motion_encode_net.mean_std_inv)
             else:
                 zz = z.permute(1,0,2)
             # motion_tokens_input.append(zz)
