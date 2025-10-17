@@ -200,7 +200,7 @@ class MotGPT(BaseModel):
             sampled_token_latents, motion_mask = self.lm.sample_tokens(
                 outputs, self.lm.device, 
                 temperature=1.0, cfg=self.guidance_scale, 
-            vae_mean_std_inv=self.vae.mean_std_inv_2) # , cfg_schedule="linear"
+            vae_mean_std_inv=self.vae.mean_std_inv) # , cfg_schedule="linear"
             sampled_token_latents = sampled_token_latents.reshape(len(lengths), self.vae.latent_size, -1).permute(1,0,2)  # [1,bs,256]
             feats_rst = self.vae.decode(sampled_token_latents, lengths=lengths)
 
