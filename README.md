@@ -41,7 +41,7 @@ Extensive experiments show that our approach achieves competitive performance on
 
 ## 🚩 News
 
-- [2025/10/17] 🔥🔥 Release **MotionGPT3 models** on [huggingface](https://huggingface.co/Boif/MotionGPT3)
+- [2025/10/17] 🔥🔥 Release **MotionGPT3 models** on [huggingface](https://huggingface.co/OpenMotionLab/motiongpt3)
 - [2025/06/30] Upload and init project
 
 ## ⚡ Quick Start
@@ -103,7 +103,7 @@ bash prepare/download_pretrained_motiongpt3_model.sh
 
 Visit [the Google Driver](https://drive.google.com/drive/folders/1NMDuI2F0UO2Opl778C37DWCZdHcy5DOh?usp=drive_link) to download the previous dependencies.
 
-Visit [the Hugging Face](https://huggingface.co/Boif/MotionGPT3) to download the pretrained models.
+Visit [the Hugging Face](https://huggingface.co/OpenMotionLab/motiongpt3) to download the pretrained models.
 
 </details>
 
