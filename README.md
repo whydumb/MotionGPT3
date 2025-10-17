@@ -90,19 +90,19 @@ Then run following script to process checkpoints:
 python -m scripts.gen_mot_gpt
 ```
 
-<!-- ### 3. Pre-trained model
+### 3. Pre-trained model
 
 Run the script to download the pre-trained model
 
 ```
-bash prepare/download_pretrained_models.sh
+bash prepare/download_pretrained_motiongpt3_model.sh
 ```
 
 ### 4. (Optional) Download manually
 
-Visit [the Google Driver](https://drive.google.com/drive/folders/xxx) to download the previous dependencies.
+Visit [the Google Driver](https://drive.google.com/drive/folders/1NMDuI2F0UO2Opl778C37DWCZdHcy5DOh?usp=drive_link) to download the previous dependencies.
 
-Visit [the Hugging Face](https://XXXXXX) to download the pretrained models. -->
+Visit [the Hugging Face](https://huggingface.co/Boif/MotionGPT3) to download the pretrained models.
 
 </details>
 
