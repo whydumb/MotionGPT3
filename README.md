@@ -1,5 +1,5 @@
 <div align= "center">
-    <h1> MotionGPT3 </h1>
+    <h1> Motion </h1>
 
 </div>
 
