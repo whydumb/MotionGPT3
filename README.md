@@ -1,5 +1,5 @@
 <div align= "center">
-    <h1> Official repo for MotionGPT3 </h1>
+    <h1> MotionGPT3 </h1>
 
 </div>
 
